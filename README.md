@@ -49,7 +49,7 @@ import doppler_colab
 ## Secure by Default
 
 - **Silent Payloads**: `doppler-colab` will never print the returned payload or tokens. You only receive a safe confirmation of the number of imported parameters.
-- **Write Warnings**: If your Service Token contains unrestricted write capabilities, the package will proactively warn you to utilize a Read-Only token for security.
+- **Service Token Enforcement**: `doppler-colab` enforces the use of scoped Service Tokens (`dp.st.*`). Personal tokens, CLI tokens, and other token types are rejected with a clear error message.
 
 ## Disclaimer & Acknowledgements
 

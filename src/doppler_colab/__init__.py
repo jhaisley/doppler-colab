@@ -4,7 +4,6 @@ Seamlessly inject Doppler secrets into Google Colab environments.
 """
 
 import os
-import warnings
 from importlib.metadata import PackageNotFoundError, version
 
 import httpx
@@ -37,7 +36,7 @@ def load(*, api_base: str = _DEFAULT_API_BASE):
             Doppler API. Override for Doppler Enterprise (self-hosted).
     """
     token = _discover_token()
-    _validate_token(token, api_base)
+    _validate_token(token)
     secrets_data = _fetch_secrets(token, api_base)
     count = _inject_secrets(secrets_data)
 
@@ -84,50 +83,12 @@ def _discover_token() -> str:
     return token
 
 
-def _validate_token(token: str, api_base: str) -> None:
-    """Validate that the token is a Service Token and check its access level."""
+def _validate_token(token: str) -> None:
+    """Validate that the token is a Service Token."""
     if not token.startswith('dp.st.'):
         raise ValueError(
             "Invalid token type. doppler-colab requires a Service Token (starts with 'dp.st.'). "
             'Personal tokens, CLI tokens, and other token types are not supported.'
-        )
-
-    # Check token access level via /v3/me
-    try:
-        resp = httpx.get(
-            f'{api_base}/v3/me',
-            auth=(token, ''),
-            headers={'User-Agent': 'doppler-colab'},
-            timeout=_REQUEST_TIMEOUT,
-        )
-        resp.raise_for_status()
-        token_info = resp.json()
-        access = token_info.get('access', '')
-
-        if access != 'read':
-            warnings.warn(
-                "Security Warning: Your Doppler Service Token has 'write' access. "
-                'In ephemeral environments like Colab, it is highly recommended to use a '
-                "'read-only' Service Token.",
-                stacklevel=3,
-            )
-    except httpx.HTTPStatusError as e:
-        status = e.response.status_code
-        if status in (401, 403):
-            raise RuntimeError(
-                f'Doppler token validation failed (HTTP {status}). '
-                'Your Service Token may be invalid, expired, or revoked.'
-            ) from None
-        # Other HTTP errors (5xx, etc.) — warn and continue
-        warnings.warn(
-            f'Could not validate Doppler token access level (HTTP {status}). Proceeding anyway.',
-            stacklevel=3,
-        )
-    except httpx.RequestError:
-        # Network-level failure — warn and continue
-        warnings.warn(
-            'Could not reach the Doppler API to validate token access level. Proceeding anyway.',
-            stacklevel=3,
         )
 
 

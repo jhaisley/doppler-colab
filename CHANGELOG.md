@@ -7,8 +7,7 @@
 - Added native Google Colab `userdata` keychain integrations.
 - Dropped `urllib` and `python-dotenv` dependencies in favor of native JSON API parsing via `httpx`.
 - Introduced `%doppler_load` IPython cell magic for cleaner notebook workflows.
-- Implemented aggressive token validation enforcing Service Tokens (`dp.st.*`) and issuing pre-flight read/write permission security warnings.
-- Added robust `whoami` validation distinguishing auth failures from network errors.
+- Implemented token validation enforcing Service Tokens (`dp.st.*`) with clear error messages for unsupported token types.
 - Filtered Doppler metadata keys (`DOPPLER_PROJECT`, `DOPPLER_CONFIG`, `DOPPLER_ENVIRONMENT`) from secret injection and count.
 - Added 10-second request timeouts to prevent notebook kernel hangs.
 - Sanitized error tracebacks to prevent token leakage in notebook output.

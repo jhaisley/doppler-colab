@@ -8,11 +8,7 @@ import respx
 
 from doppler_colab import _DEFAULT_API_BASE, load
 
-ME_URL = f'{_DEFAULT_API_BASE}/v3/me'
 SECRETS_URL = f'{_DEFAULT_API_BASE}/v3/configs/config/secrets/download'
-
-# Standard read-only /v3/me response
-ME_READONLY = {'access': 'read'}
 
 
 class TestLoadEndToEnd:
@@ -21,7 +17,6 @@ class TestLoadEndToEnd:
     @respx.mock
     def test_full_happy_path(self, _no_colab, monkeypatch, sample_secrets, capsys):
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(200, json=sample_secrets))
 
         load()
@@ -38,7 +33,6 @@ class TestLoadEndToEnd:
     @respx.mock
     def test_prints_correct_secret_count(self, _no_colab, monkeypatch, sample_secrets, capsys):
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(200, json=sample_secrets))
 
         load()
@@ -50,7 +44,6 @@ class TestLoadEndToEnd:
     @respx.mock
     def test_prints_unknown_project_when_metadata_missing(self, _no_colab, monkeypatch, capsys):
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(200, json={'MY_SECRET': 'value'}))
 
         load()
@@ -62,14 +55,12 @@ class TestLoadEndToEnd:
     def test_custom_api_base(self, _no_colab, monkeypatch, sample_secrets):
         custom_base = 'https://doppler.internal.corp'
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        me_route = respx.get(f'{custom_base}/v3/me').mock(return_value=httpx.Response(200, json=ME_READONLY))
         secrets_route = respx.get(f'{custom_base}/v3/configs/config/secrets/download').mock(
             return_value=httpx.Response(200, json=sample_secrets)
         )
 
         load(api_base=custom_base)
 
-        assert me_route.called
         assert secrets_route.called
 
     def test_no_token_raises(self, _no_colab):
@@ -84,7 +75,6 @@ class TestLoadEndToEnd:
     @respx.mock
     def test_api_failure_raises(self, _no_colab, monkeypatch):
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(500, text='Server Error'))
 
         with pytest.raises(RuntimeError, match='HTTP 500'):
@@ -98,7 +88,6 @@ class TestLoadSecurity:
     def test_token_never_in_stdout(self, _no_colab, monkeypatch, sample_secrets, capsys):
         token = 'dp.st.dev.SUPERSECRETTOKEN'
         monkeypatch.setenv('DOPPLER_TOKEN', token)
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(200, json=sample_secrets))
 
         load()
@@ -110,13 +99,11 @@ class TestLoadSecurity:
     @respx.mock
     def test_secret_values_never_in_stdout(self, _no_colab, monkeypatch, sample_secrets, capsys):
         monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.dev.TESTTOKEN')
-        respx.get(ME_URL).mock(return_value=httpx.Response(200, json=ME_READONLY))
         respx.get(SECRETS_URL).mock(return_value=httpx.Response(200, json=sample_secrets))
 
         load()
 
         captured = capsys.readouterr()
-        # Only check actual user secrets, not Doppler metadata (project name is intentionally displayed)
         from doppler_colab import _DOPPLER_METADATA_KEYS
 
         for key, value in sample_secrets.items():
