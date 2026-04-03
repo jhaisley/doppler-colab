@@ -26,7 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "httpx>=1.7.1"
+    "httpx>=0.24"
 ]
 
 [project.urls]
@@ -34,8 +34,11 @@ dependencies = [
 "Source" = "https://github.com/jhaisley/python-doppler-env"
 
 [project.optional-dependencies]
-dev = ["check-manifest"]
-test = []
+dev = ["check-manifest", "ruff"]
+test = ["pytest", "respx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
