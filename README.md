@@ -6,6 +6,8 @@ When working in ephemeral environments like Google Colab, managing secrets secur
 
 No CLI dependencies, no leaking print statements, and downstream libraries instantly work.
 
+[![Release](https://github.com/jhaisley/doppler-colab/actions/workflows/release.yml/badge.svg)](https://github.com/jhaisley/doppler-colab/actions/workflows/release.yml)
+
 ## Installation
 
 Install the package directly inside your Colab notebook:
