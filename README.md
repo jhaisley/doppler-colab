@@ -53,7 +53,7 @@ import doppler_colab
 
 ## Disclaimer & Acknowledgements
 
-*Please note: This is a community-driven project and is **not** an official Doppler product, nor is it officially supported by Doppler (though we'd be happy to change that!).*
+*Please note: This is a community-driven project and is **not** an official Doppler product, nor is it officially endorsed by Doppler.*
 
 This refactoring and adaptation to Google Colab would not have been possible without the foundational work of the original authors at Doppler on the `python-doppler-env` package.
 
