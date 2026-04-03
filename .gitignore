@@ -131,6 +131,9 @@ dmypy.json
 # Temporary output files
 *output.txt
 
+# Lock files (library — consumers resolve their own deps)
+uv.lock
+
 # IDEs
 .idea
 .vscode/settings.json
