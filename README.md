@@ -22,7 +22,7 @@ Install the package directly inside your Colab notebook:
 4. Add a new secret with the name `DOPPLER_TOKEN` and paste in your Service Token (`dp.st...`).
 5. Ensure the **"Notebook access"** toggle is explicitly switched **ON** next to the token, enabling read-access for your environment.
 
-*(Fallback: If you are not in Colab, the package will automatically check `os.environ["DOPPLER_TOKEN"]` as a fallback).*
+*(Fallback: If you are not in Colab, or are on Colab Enterprise the package will automatically check `os.environ["DOPPLER_TOKEN"]` as a fallback).*
 
 ## Usage
 
@@ -55,6 +55,6 @@ import doppler_colab
 
 *Please note: This is a community-driven project and is **not** an official Doppler product, nor is it officially supported by Doppler (though we'd be happy to change that!).*
 
-This refactoring and adaptation to Google Colab would not have been possible without the foundational work of the original authors at Doppler on the `python-doppler-env` package. 
+This refactoring and adaptation to Google Colab would not have been possible without the foundational work of the original authors at Doppler on the `python-doppler-env` package.
 
 For bug reports or feature requests specifically related to this Colab adaptation, please create an issue on this repository.
