@@ -1,42 +1,49 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "doppler_colab"
-version = "0.3.1"
-description = "Inject Doppler secrets as environment variables into your Python application during local development with debugging support for PyCharm and Visual Studio Code."
+version = "0.4.0"
+description = "Seamlessly and securely inject Doppler secrets into Google Colab notebook environments."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
-authors = [{name = "Doppler", email = "support@doppler.com"}]
-keywords = ["doppler", "environment variables", "app secrets", "app config", "os.environ"]
+authors = [
+    {name = "Jordan Haisley", email = "jordan@jordanhaisley.me"},
+    {name = "Doppler", email = "support@doppler.com"},
+]
+keywords = ["doppler", "google colab", "jupyter", "notebook", "secrets management", "environment variables"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
     "Topic :: Utilities",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "httpx"
+    "httpx>=1.7.1"
 ]
 
 [project.urls]
-"Bug Reports" = "https://github.com/dopplerhq/python-doppler-env/issues"
-"Source" = "https://github.com/dopplerhq/python-doppler-env"
+"Bug Reports" = "https://github.com/jhaisley/python-doppler-env/issues"
+"Source" = "https://github.com/jhaisley/python-doppler-env"
 
 [project.optional-dependencies]
 dev = ["check-manifest"]
 test = []
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-packages = ["doppler_colab"]
-
-[tool.black]
-skip-string-normalization = true
+[tool.ruff]
 line-length = 120
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

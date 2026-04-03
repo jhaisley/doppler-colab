@@ -1,17 +1,16 @@
 ---
 name: Bug report
-about: Report an issue with the doppler-env Python package
+about: Report an issue with the doppler-colab Python package
 title: "[BUG]"
 labels: bug
-assignees: ryan-blunden
 
 ---
 
 ## Environment
 
-* Doppler Env version:
+* doppler-colab version:
 * Python version:
-* Operating System:
+* Operating System / Google Colab runtime:
 
 ## Description
 

@@ -6,22 +6,22 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
     - name: Install build dependencies
       run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install hatch ruff
     - name: Code checks
       run: |
-        flake8 .
-        black --skip-string-normalization --line-length 120 .
+        ruff check .
+        ruff format --check .
     - name: Build
-      run: python -m build .
+      run: hatch build
     - name: Publish
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.PYPI_TOKEN }}

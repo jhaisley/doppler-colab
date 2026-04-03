@@ -4,77 +4,171 @@ Seamlessly inject Doppler secrets into Google Colab environments.
 """
 
 import os
-import httpx
 import warnings
+from importlib.metadata import PackageNotFoundError, version
 
-def load():
+import httpx
+
+__all__ = ['load']
+
+try:
+    __version__ = version('doppler_colab')
+except PackageNotFoundError:
+    __version__ = '0.0.0'
+
+# Doppler metadata keys that should not be injected as user secrets
+_DOPPLER_METADATA_KEYS = frozenset(
+    {
+        'DOPPLER_PROJECT',
+        'DOPPLER_CONFIG',
+        'DOPPLER_ENVIRONMENT',
+    }
+)
+
+_DEFAULT_API_BASE = 'https://api.doppler.com'
+_REQUEST_TIMEOUT = 10.0
+
+
+def load(*, api_base: str = _DEFAULT_API_BASE):
+    """Fetch secrets from Doppler and inject them into os.environ.
+
+    Args:
+        api_base: Base URL for the Doppler API. Defaults to the public
+            Doppler API. Override for Doppler Enterprise (self-hosted).
+    """
+    token = _discover_token()
+    _validate_token(token, api_base)
+    secrets_data = _fetch_secrets(token, api_base)
+    count = _inject_secrets(secrets_data)
+
+    project_name = secrets_data.get('DOPPLER_PROJECT', 'Unknown Project')
+    print(f'✅ Successfully injected {count} secrets from Doppler [Project: {project_name}] into the environment.')
+
+
+def _discover_token() -> str:
+    """Discover the Doppler token from Colab userdata or os.environ."""
     token = None
-    
+
     # 1. Try Colab userdata
     try:
         from google.colab import userdata
+
         token = userdata.get('DOPPLER_TOKEN')
-    except (ImportError, Exception):
-        pass
+    except ImportError:
+        pass  # Not running in Colab
+    except Exception as e:
+        # Surface Colab-specific access errors clearly
+        error_name = type(e).__name__
+        if error_name == 'NotebookAccessError':
+            raise RuntimeError(
+                'DOPPLER_TOKEN exists in Colab Secrets but notebook access is not enabled. '
+                "Toggle the 'Notebook access' switch on."
+            ) from None
+        elif error_name == 'SecretNotFoundError':
+            pass  # Secret not configured in Colab; fall through to os.environ
+        else:
+            raise  # Unexpected error; let it propagate
 
     # 2. Fallback to os.environ
     if not token:
         token = os.environ.get('DOPPLER_TOKEN')
 
-    # 3. Raise helpful exception if no token
+    # 3. Raise helpful exception if no token found
     if not token:
-        raise RuntimeError("DOPPLER_TOKEN not found. Please click the 🔑 'Secrets' icon on the left sidebar in Colab to add your Doppler Service Token, and toggle the 'Notebook access' switch on. Or, set the DOPPLER_TOKEN environment variable.")
-
-    # 4. Enforce Service Token
-    if not token.startswith('dp.st.'):
-        raise ValueError("Invalid token type. doppler-colab requires a Service Token (starts with 'dp.st.').")
-
-    # 5. Check Token Capabilities for write access warnings
-    try:
-        whoami_resp = httpx.get(
-            'https://api.doppler.com/v3/auth/whoami',
-            auth=(token, ''),
-            headers={"User-Agent": "doppler-colab"}
+        raise RuntimeError(
+            "DOPPLER_TOKEN not found. Please click the 🔑 'Secrets' icon on the left sidebar "
+            "in Colab to add your Doppler Service Token, and toggle the 'Notebook access' switch on. "
+            'Or, set the DOPPLER_TOKEN environment variable.'
         )
-        whoami_resp.raise_for_status()
-        capabilities = whoami_resp.json().get('token', {}).get('capabilities', [])
-        if 'write' in capabilities:
-            warnings.warn("Security Warning: Your Doppler Service Token has 'write' access. In ephemeral environments like Colab, it is highly recommended to use a 'read-only' Service Token.")
-    except httpx.HTTPError:
-        pass # Ignore failure and proceed to fetch secrets
 
-    # 6. Fetch Secrets
+    return token
+
+
+def _validate_token(token: str, api_base: str) -> None:
+    """Validate that the token is a Service Token and check its capabilities."""
+    # Enforce Service Token prefix
+    if not token.startswith('dp.st.'):
+        raise ValueError(
+            "Invalid token type. doppler-colab requires a Service Token (starts with 'dp.st.'). "
+            'Personal tokens, CLI tokens, and other token types are not supported.'
+        )
+
+    # Check token capabilities via whoami
     try:
         resp = httpx.get(
-            'https://api.doppler.com/v3/configs/config/secrets/download',
+            f'{api_base}/v3/auth/whoami',
             auth=(token, ''),
-            params={'format': 'json'},
-            headers={"User-Agent": "doppler-colab"}
+            headers={'User-Agent': 'doppler-colab'},
+            timeout=_REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
-        secrets_data = resp.json()
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(f"Failed to fetch secrets from Doppler API: {e.response.text}") from e
-    except httpx.RequestError as e:
-        raise RuntimeError(f"Doppler API request failed: {e}") from e
+        token_info = resp.json().get('token', {})
+        capabilities = token_info.get('capabilities', [])
 
-    # 7. Inject into os.environ
+        if 'write' in capabilities:
+            warnings.warn(
+                "Security Warning: Your Doppler Service Token has 'write' access. "
+                'In ephemeral environments like Colab, it is highly recommended to use a '
+                "'read-only' Service Token.",
+                stacklevel=3,
+            )
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code
+        if status in (401, 403):
+            raise RuntimeError(
+                f'Doppler token validation failed (HTTP {status}). '
+                'Your Service Token may be invalid, expired, or revoked.'
+            ) from None
+        # Other HTTP errors (5xx, etc.) — warn and continue
+        warnings.warn(
+            f'Could not validate Doppler token capabilities (HTTP {status}). Proceeding anyway.',
+            stacklevel=3,
+        )
+    except httpx.RequestError:
+        # Network-level failure — warn and continue
+        warnings.warn(
+            'Could not reach the Doppler API to validate token capabilities. Proceeding anyway.',
+            stacklevel=3,
+        )
+
+
+def _fetch_secrets(token: str, api_base: str) -> dict:
+    """Fetch secrets from the Doppler API."""
+    try:
+        resp = httpx.get(
+            f'{api_base}/v3/configs/config/secrets/download',
+            auth=(token, ''),
+            params={'format': 'json'},
+            headers={'User-Agent': 'doppler-colab'},
+            timeout=_REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f'Failed to fetch secrets from Doppler API (HTTP {e.response.status_code}).') from None
+    except httpx.RequestError:
+        raise RuntimeError(f'Doppler API request failed: could not connect to {api_base}') from None
+
+
+def _inject_secrets(secrets_data: dict) -> int:
+    """Inject secrets into os.environ, filtering out Doppler metadata keys."""
     count = 0
     for key, value in secrets_data.items():
+        if key in _DOPPLER_METADATA_KEYS:
+            continue
         if isinstance(value, str):
             os.environ[key] = value
             count += 1
-            
-    # 8. Print safe confirmation
-    project_name = secrets_data.get('DOPPLER_PROJECT', 'Unknown Project')
-    print(f"✅ Successfully injected {count} secrets from Doppler [Project: {project_name}] into the environment.")
+    return count
+
 
 # IPython cell magic registration
 try:
     from IPython.core.magic import register_line_magic
-    
+
     @register_line_magic
     def doppler_load(line):
+        """IPython magic to load Doppler secrets: %doppler_load"""
         load()
 except ImportError:
     pass
