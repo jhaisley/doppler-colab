@@ -60,23 +60,3 @@ def sample_secrets():
         'DOPPLER_CONFIG': 'dev',
         'DOPPLER_ENVIRONMENT': 'development',
     }
-
-
-@pytest.fixture()
-def whoami_readonly_response():
-    """A whoami response for a read-only service token."""
-    return {
-        'token': {
-            'capabilities': ['read'],
-        }
-    }
-
-
-@pytest.fixture()
-def whoami_readwrite_response():
-    """A whoami response for a read-write service token."""
-    return {
-        'token': {
-            'capabilities': ['read', 'write'],
-        }
-    }

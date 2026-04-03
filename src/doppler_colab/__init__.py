@@ -85,27 +85,26 @@ def _discover_token() -> str:
 
 
 def _validate_token(token: str, api_base: str) -> None:
-    """Validate that the token is a Service Token and check its capabilities."""
-    # Enforce Service Token prefix
+    """Validate that the token is a Service Token and check its access level."""
     if not token.startswith('dp.st.'):
         raise ValueError(
             "Invalid token type. doppler-colab requires a Service Token (starts with 'dp.st.'). "
             'Personal tokens, CLI tokens, and other token types are not supported.'
         )
 
-    # Check token capabilities via whoami
+    # Check token access level via /v3/me
     try:
         resp = httpx.get(
-            f'{api_base}/v3/auth/whoami',
+            f'{api_base}/v3/me',
             auth=(token, ''),
             headers={'User-Agent': 'doppler-colab'},
             timeout=_REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
-        token_info = resp.json().get('token', {})
-        capabilities = token_info.get('capabilities', [])
+        token_info = resp.json()
+        access = token_info.get('access', '')
 
-        if 'write' in capabilities:
+        if access != 'read':
             warnings.warn(
                 "Security Warning: Your Doppler Service Token has 'write' access. "
                 'In ephemeral environments like Colab, it is highly recommended to use a '
@@ -121,13 +120,13 @@ def _validate_token(token: str, api_base: str) -> None:
             ) from None
         # Other HTTP errors (5xx, etc.) — warn and continue
         warnings.warn(
-            f'Could not validate Doppler token capabilities (HTTP {status}). Proceeding anyway.',
+            f'Could not validate Doppler token access level (HTTP {status}). Proceeding anyway.',
             stacklevel=3,
         )
     except httpx.RequestError:
         # Network-level failure — warn and continue
         warnings.warn(
-            'Could not reach the Doppler API to validate token capabilities. Proceeding anyway.',
+            'Could not reach the Doppler API to validate token access level. Proceeding anyway.',
             stacklevel=3,
         )
 
