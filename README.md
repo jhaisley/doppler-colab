@@ -1,84 +1,60 @@
-# doppler-env
+# doppler-colab
 
-The doppler-env package automates the injection of Doppler secrets as environment variables into any Python application and works in the terminal, PyCharm, and Visual Studio Code.
+Seamlessly and securely inject Doppler secrets into Google Colab interactive environments.
 
-## Motivation
+When working in ephemeral environments like Google Colab, managing secrets securely is a challenge. `doppler-colab` natively integrates with Colab's built-in Secrets management to securely fetch your environment variables from the Doppler API and inject them silently into `os.environ`.
 
-The Doppler CLI provides the easiest method of injecting secrets into your application:
+No CLI dependencies, no leaking print statements, and downstream libraries instantly work.
 
-```sh
-doppler run -- python app.py
+## Installation
+
+Install the package directly inside your Colab notebook:
+
+```python
+!pip install -q doppler-colab
 ```
-
-But when debugging with PyCharm or Visual Studio Code, a vendor-specific Python entry-point is used, preventing the Doppler CLI from acting as the application runner. At Doppler, we go to great lengths to [prevent secrets ending up on developer's machines](https://blog.doppler.com/how-to-prevent-secrets-from-ending-up-on-developers-machines) so downloading secrets to a .env file wasn't an option.
-
-Thanks to Python's [Site configuration hook](https://docs.python.org/3/library/site.html) via a path configuration file, we can replicate the `doppler run` workflow by fetching the secrets via the Doppler CLI (recommended) or API and injecting into your Python application process prior to your code by being executed.
 
 ## Setup
 
-Ensure you have [installed the Doppler CLI](https://docs.doppler.com/docs/enclave-installation) locally and have [created a Doppler Project](https://docs.doppler.com/docs/create-project). Then authorize the Doppler CLI to retrieve secrets from your workplace by running:
+1. Generate a **Service Token** inside your Doppler dashboard. (Service tokens enforce scoping and ensure you safely access the correct environment).
+2. Open your Google Colab notebook.
+3. Click the 🔑 **Secrets** icon on the left sidebar.
+4. Add a new secret with the name `DOPPLER_TOKEN` and paste in your Service Token (`dp.st...`).
+5. Ensure the **"Notebook access"** toggle is explicitly switched **ON** next to the token, enabling read-access for your environment.
 
-```sh
-doppler login
+*(Fallback: If you are not in Colab, the package will automatically check `os.environ["DOPPLER_TOKEN"]` as a fallback).*
+
+## Usage
+
+### Method 1: Python API
+
+Invoke the package manually to fetch and load your secrets:
+
+```python
+import doppler_colab
+doppler_colab.load()
+
+# ✅ Successfully injected 14 secrets from Doppler [Project: your-project] into the environment.
 ```
 
-Then install `doppler-env` in your local development environment or add it to the list of dev specific dependencies:
+### Method 2: IPython Cell Magic
 
-```sh
-pip install doppler-env
+For a cleaner interactive workflow, use the `%doppler_load` magic command at the top of your cells:
+
+```python
+import doppler_colab
+%doppler_load
 ```
 
-## Configuration
+## Secure by Default
 
-First, define the `DOPPLER_ENV` environment variable in your IDE, editor, or terminal to trigger the injection of secrets:
+- **Silent Payloads**: `doppler-colab` will never print the returned payload or tokens. You only receive a safe confirmation of the number of imported parameters.
+- **Write Warnings**: If your Service Token contains unrestricted write capabilities, the package will proactively warn you to utilize a Read-Only token for security.
 
-```sh
-export DOPPLER_ENV=1
-```
+## Disclaimer & Acknowledgements
 
-You can enable logging for troubleshooting purposes by setting the `DOPPLER_ENV_LOGGING` environment variable:
+*Please note: This is a community-driven project and is **not** an official Doppler product, nor is it officially supported by Doppler (though we'd be happy to change that!).*
 
-```sh
-export DOPPLER_ENV_LOGGING=1
-```
+This refactoring and adaptation to Google Colab would not have been possible without the foundational work of the original authors at Doppler on the `python-doppler-env` package. 
 
-Then configure which secrets to fetch for your application by either using the CLI in the root directory of your application:
-
-```sh
-doppler setup
-```
-
-Or set the `DOPPLER_PROJECT` and `DOPPLER_CONFIG` environment variables in your debug configuration within PyCharm or Visual Studio Code.
-
-Now whenever the Python interpreter is invoked for your application, secrets will be injected prior to your application being run:
-
-```sh
-python app.py
-
-# >> [doppler-env]: DOPPLER_ENV environment variable set. Fetching secrets using Doppler CLI
-```
-
-In restrictive environments where the use of the Doppler CLI isn't possible, set a `DOPPLER_TOKEN` environment variable with a [Service Token](https://docs.doppler.com/docs/service-tokens) to fetch secrets directly from the Doppler API:
-
-
-```sh
-export DOPPLER_TOKEN='dp.st.dev.xxxxxxx'
-
-python app.py
-
-# >> [doppler-env]: DOPPLER_ENV and DOPPLER_TOKEN environment variable set. Fetching secrets from Doppler API
-```
-
-## Acknowledgements
-
-This approach to injecting environment variables was inspired by [patch-env](https://github.com/caricalabs/patch-env).
-
-## Issues
-
-For any bug reports, issues, or enhancements, please [create a repository issue]().
-
-# Support
-
-You can get support in the [Doppler community forum](https://community.doppler.com/), find us on [Twitter](https://twitter.com/doppler), and for bugs or feature requests, [create an issue](https://github.com/DopplerHQ/python-doppler-env/issues/new) on the [DopplerHQ/python-doppler-env](https://github.com/DopplerHQ/python-doppler-env) GitHub repository.
-
-If you need help, either use our in-product support or head over to the [Doppler Community Forum](https://community.doppler.com/) to get your questions answered by a member of the Doppler support team or 
+For bug reports or feature requests specifically related to this Colab adaptation, please create an issue on this repository.

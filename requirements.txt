@@ -5,3 +5,4 @@ check-manifest
 black
 flake8
 twine
+httpx
